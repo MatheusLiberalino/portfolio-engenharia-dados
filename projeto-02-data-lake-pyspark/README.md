@@ -115,6 +115,39 @@ python src/quality_checks.py
 - Quantidade deve ser positiva.
 - Receita deve ser consistente com quantidade e preco unitario.
 
+## Resultado Local Validado
+
+Execucao validada em ambiente Windows com:
+
+| Componente | Versao |
+| --- | --- |
+| Java | Temurin OpenJDK 17.0.19 |
+| PySpark | 3.5.1 |
+| fastparquet | 2024.5.0 |
+
+Comandos executados:
+
+```powershell
+python src/run_pipeline.py
+python src/quality_checks.py
+```
+
+Resultado das checagens:
+
+```text
+OK - silver customers possui registros
+OK - silver products possui registros
+OK - silver orders possui registros
+OK - silver order_items possui registros
+OK - gold daily_sales possui registros
+OK - gold product_sales possui registros
+OK - gold state_sales possui registros
+OK - quantidades sao positivas
+OK - todos os pedidos possuem cliente valido
+OK - todos os itens possuem produto valido
+OK - receita gold e positiva
+```
+
 ## Decisoes Tecnicas
 
 - JSON foi usado na origem para representar dados semi-estruturados comuns em Data Lakes.
@@ -123,6 +156,8 @@ python src/quality_checks.py
 - A camada silver aplica tipos, limpeza e relacionamentos.
 - A camada gold entrega agregacoes prontas para consumo.
 - O Spark roda em modo local leve com `local[2]`, `2g` de memoria no driver e poucas particoes para funcionar bem em computadores com 8 GB de RAM.
+- Em Windows, caso o Spark nao encontre `winutils.exe`, o projeto usa um fallback local com pandas/fastparquet para gravar e validar os Parquet dos datasets pequenos.
+- As transformacoes principais continuam sendo feitas com DataFrames PySpark em memoria.
 
 ## Modo Leve
 

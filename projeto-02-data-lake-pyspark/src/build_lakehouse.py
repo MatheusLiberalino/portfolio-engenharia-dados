@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+import shutil
+from datetime import date, datetime
+from decimal import Decimal
 from pathlib import Path
 
+import pandas as pd
+from py4j.protocol import Py4JJavaError
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 
@@ -24,7 +29,45 @@ def get_spark() -> SparkSession:
 
 
 def write_parquet(dataframe, path: Path) -> None:
-    dataframe.write.mode("overwrite").parquet(str(path))
+    try:
+        dataframe.write.mode("overwrite").parquet(str(path))
+    except Py4JJavaError as error:
+        error_message = str(error)
+        if "HADOOP_HOME" not in error_message and "winutils.exe" not in error_message:
+            raise
+
+        # Local Windows fallback for small portfolio datasets when winutils.exe is not installed.
+        if path.exists():
+            shutil.rmtree(path)
+        path.mkdir(parents=True, exist_ok=True)
+        normalize_for_fastparquet(dataframe.toPandas()).to_parquet(
+            path / "part-00000.parquet",
+            engine="fastparquet",
+            index=False,
+        )
+
+
+def normalize_for_fastparquet(dataframe: pd.DataFrame) -> pd.DataFrame:
+    normalized = dataframe.copy()
+
+    for column in normalized.columns:
+        if normalized[column].dtype != "object":
+            continue
+
+        sample = normalized[column].dropna()
+        if sample.empty:
+            normalized[column] = normalized[column].astype(str)
+            continue
+
+        first_value = sample.iloc[0]
+        if isinstance(first_value, Decimal):
+            normalized[column] = normalized[column].astype(float)
+        elif isinstance(first_value, (date, datetime)):
+            normalized[column] = pd.to_datetime(normalized[column])
+        else:
+            normalized[column] = normalized[column].astype(str)
+
+    return normalized
 
 
 def build_bronze(spark: SparkSession) -> dict[str, object]:
@@ -41,29 +84,29 @@ def build_bronze(spark: SparkSession) -> dict[str, object]:
     return datasets
 
 
-def build_silver(spark: SparkSession) -> dict[str, object]:
+def build_silver(bronze: dict[str, object]) -> dict[str, object]:
     customers = (
-        spark.read.parquet(str(BRONZE_DIR / "customers"))
+        bronze["customers"]
         .dropDuplicates(["customer_id"])
         .withColumn("created_at", F.to_date("created_at"))
         .withColumn("email", F.lower("email"))
     )
 
     products = (
-        spark.read.parquet(str(BRONZE_DIR / "products"))
+        bronze["products"]
         .dropDuplicates(["product_id"])
         .withColumn("unit_price", F.col("unit_price").cast("decimal(12,2)"))
     )
 
     orders = (
-        spark.read.parquet(str(BRONZE_DIR / "orders"))
+        bronze["orders"]
         .dropDuplicates(["order_id"])
         .withColumn("order_date", F.to_date("order_date"))
         .withColumn("ingestion_date", F.to_date("ingestion_date"))
     )
 
     order_items = (
-        spark.read.parquet(str(BRONZE_DIR / "order_items"))
+        bronze["order_items"]
         .dropDuplicates(["order_item_id"])
         .withColumn("quantity", F.col("quantity").cast("integer"))
         .withColumn("unit_price", F.col("unit_price").cast("decimal(12,2)"))
@@ -132,8 +175,8 @@ def build_gold(silver: dict[str, object]) -> None:
 def main() -> None:
     spark = get_spark()
     try:
-        build_bronze(spark)
-        silver = build_silver(spark)
+        bronze = build_bronze(spark)
+        silver = build_silver(bronze)
         build_gold(silver)
         print(f"Lakehouse built at: {PROJECT_DIR / 'data'}")
     finally:

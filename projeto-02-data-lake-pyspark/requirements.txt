@@ -1,1 +1,3 @@
 pyspark==3.5.1
+pandas==2.2.2
+fastparquet==2024.5.0
