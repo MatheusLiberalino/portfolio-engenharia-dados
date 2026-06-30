@@ -58,6 +58,15 @@ Requisitos:
 - Python 3.10+
 - Java instalado e disponivel no `PATH` para executar o PySpark
 
+Para validar o ambiente:
+
+```powershell
+python --version
+java -version
+```
+
+Se `java -version` nao funcionar, instale um JDK 17, como Eclipse Temurin ou Microsoft Build of OpenJDK, e reinicie o terminal.
+
 1. Crie e ative um ambiente virtual:
 
 ```powershell
@@ -113,6 +122,19 @@ python src/quality_checks.py
 - A camada bronze preserva os dados da origem com pouca transformacao.
 - A camada silver aplica tipos, limpeza e relacionamentos.
 - A camada gold entrega agregacoes prontas para consumo.
+- O Spark roda em modo local leve com `local[2]`, `2g` de memoria no driver e poucas particoes para funcionar bem em computadores com 8 GB de RAM.
+
+## Modo Leve
+
+Este projeto foi configurado para rodar em computadores modestos:
+
+```python
+.master("local[2]")
+.config("spark.driver.memory", "2g")
+.config("spark.sql.shuffle.partitions", "2")
+```
+
+Essa configuracao evita que o Spark tente usar todos os recursos da maquina durante os testes locais.
 
 ## Proximas Melhorias
 

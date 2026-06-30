@@ -14,8 +14,9 @@ GOLD_DIR = PROJECT_DIR / "data" / "gold"
 def get_spark() -> SparkSession:
     return (
         SparkSession.builder.appName("data-lake-quality-checks")
-        .master("local[*]")
-        .config("spark.sql.shuffle.partitions", "4")
+        .master("local[2]")
+        .config("spark.driver.memory", "2g")
+        .config("spark.sql.shuffle.partitions", "2")
         .getOrCreate()
     )
 
