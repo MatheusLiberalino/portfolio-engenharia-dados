@@ -1,0 +1,23 @@
+name: sales_pipeline
+version: "1.0.0"
+config-version: 2
+
+profile: sales_pipeline
+
+model-paths: ["dbt/models"]
+test-paths: ["dbt/tests"]
+macro-paths: ["dbt/macros"]
+
+target-path: "dbt/target"
+clean-targets:
+  - "dbt/target"
+  - "dbt/dbt_packages"
+
+models:
+  sales_pipeline:
+    staging:
+      +schema: staging_dbt
+      +materialized: view
+    marts:
+      +schema: dw_dbt
+      +materialized: table

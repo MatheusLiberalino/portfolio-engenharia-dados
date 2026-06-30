@@ -1,0 +1,65 @@
+version: 2
+
+models:
+  - name: stg_customers
+    description: Clientes padronizados a partir da origem transacional.
+    columns:
+      - name: customer_id
+        description: Identificador natural do cliente.
+        tests:
+          - not_null
+          - unique
+      - name: email
+        description: Email normalizado em minusculas.
+        tests:
+          - not_null
+
+  - name: stg_products
+    description: Produtos padronizados a partir do catalogo de origem.
+    columns:
+      - name: product_id
+        tests:
+          - not_null
+          - unique
+      - name: unit_price
+        tests:
+          - not_null
+
+  - name: stg_orders
+    description: Pedidos padronizados a partir da origem transacional.
+    columns:
+      - name: order_id
+        tests:
+          - not_null
+          - unique
+      - name: customer_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_customers')
+              field: customer_id
+      - name: status
+        tests:
+          - accepted_values:
+              values: ['paid', 'shipped', 'delivered', 'cancelled']
+
+  - name: stg_order_items
+    description: Itens de pedido padronizados.
+    columns:
+      - name: order_item_id
+        tests:
+          - not_null
+          - unique
+      - name: order_id
+        tests:
+          - relationships:
+              to: ref('stg_orders')
+              field: order_id
+      - name: product_id
+        tests:
+          - relationships:
+              to: ref('stg_products')
+              field: product_id
+      - name: quantity
+        tests:
+          - not_null

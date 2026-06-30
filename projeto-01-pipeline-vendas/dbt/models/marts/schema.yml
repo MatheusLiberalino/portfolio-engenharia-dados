@@ -1,0 +1,75 @@
+version: 2
+
+models:
+  - name: dim_customer
+    description: Dimensao de clientes para analise de vendas.
+    columns:
+      - name: customer_key
+        description: Chave substituta da dimensao.
+        tests:
+          - not_null
+          - unique
+      - name: customer_id
+        description: Chave natural do cliente na origem.
+        tests:
+          - not_null
+          - unique
+
+  - name: dim_product
+    description: Dimensao de produtos para analise de vendas.
+    columns:
+      - name: product_key
+        tests:
+          - not_null
+          - unique
+      - name: product_id
+        tests:
+          - not_null
+          - unique
+
+  - name: dim_date
+    description: Dimensao calendario derivada das datas dos pedidos.
+    columns:
+      - name: date_key
+        description: Chave da data no formato YYYYMMDD.
+        tests:
+          - not_null
+          - unique
+      - name: full_date
+        tests:
+          - not_null
+          - unique
+
+  - name: fact_sales
+    description: Fato de vendas em nivel de item de pedido.
+    columns:
+      - name: sales_key
+        description: Chave da fato baseada no item de pedido.
+        tests:
+          - not_null
+          - unique
+      - name: order_item_id
+        tests:
+          - not_null
+          - unique
+      - name: customer_key
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_customer')
+              field: customer_key
+      - name: product_key
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_product')
+              field: product_key
+      - name: order_date_key
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_date')
+              field: date_key
+      - name: gross_amount
+        tests:
+          - not_null

@@ -1,0 +1,58 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: sales_dw_postgres
+    environment:
+      POSTGRES_DB: sales_dw
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sales_dw"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  airflow:
+    image: apache/airflow:2.9.3-python3.11
+    container_name: sales_pipeline_airflow
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      AIRFLOW__CORE__EXECUTOR: SequentialExecutor
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: sqlite:////opt/airflow/airflow.db
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: sales_dw
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      _PIP_ADDITIONAL_REQUIREMENTS: "pandas==2.2.2 psycopg2-binary==2.9.9 python-dotenv==1.0.1 dbt-postgres==1.8.2"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./:/opt/airflow/project
+      - ./dags:/opt/airflow/dags
+      - airflow_logs:/opt/airflow/logs
+    working_dir: /opt/airflow/project
+    command: >
+      bash -c "
+      cp profiles.yml.example profiles.yml &&
+      airflow db migrate &&
+      airflow users create
+        --username admin
+        --password admin
+        --firstname Data
+        --lastname Engineer
+        --role Admin
+        --email admin@example.com || true &&
+      airflow standalone
+      "
+
+volumes:
+  postgres_data:
+  airflow_logs:

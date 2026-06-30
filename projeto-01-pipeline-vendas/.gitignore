@@ -1,0 +1,13 @@
+.env
+profiles.yml
+.venv/
+__pycache__/
+*.py[cod]
+data/raw/*.csv
+data/*.sqlite
+!data/raw/.gitkeep
+dbt/target/
+dbt/dbt_packages/
+logs/
+airflow.db
+airflow-webserver.pid

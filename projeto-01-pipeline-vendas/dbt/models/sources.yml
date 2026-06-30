@@ -1,0 +1,71 @@
+version: 2
+
+sources:
+  - name: sales_raw
+    description: Tabelas carregadas pelo pipeline Python na camada staging do PostgreSQL.
+    schema: staging
+    tables:
+      - name: customers
+        description: Clientes extraidos da origem transacional.
+        columns:
+          - name: customer_id
+            description: Identificador natural do cliente.
+            tests:
+              - not_null
+              - unique
+          - name: email
+            description: Email cadastrado do cliente.
+            tests:
+              - not_null
+
+      - name: products
+        description: Catalogo de produtos vendidos.
+        columns:
+          - name: product_id
+            description: Identificador natural do produto.
+            tests:
+              - not_null
+              - unique
+          - name: unit_price
+            description: Preco unitario vigente na origem.
+            tests:
+              - not_null
+
+      - name: orders
+        description: Pedidos realizados pelos clientes.
+        columns:
+          - name: order_id
+            description: Identificador natural do pedido.
+            tests:
+              - not_null
+              - unique
+          - name: customer_id
+            description: Cliente responsavel pelo pedido.
+            tests:
+              - not_null
+              - relationships:
+                  to: source('sales_raw', 'customers')
+                  field: customer_id
+
+      - name: order_items
+        description: Itens vendidos em cada pedido.
+        columns:
+          - name: order_item_id
+            description: Identificador natural do item de pedido.
+            tests:
+              - not_null
+              - unique
+          - name: order_id
+            description: Pedido relacionado ao item.
+            tests:
+              - not_null
+              - relationships:
+                  to: source('sales_raw', 'orders')
+                  field: order_id
+          - name: product_id
+            description: Produto relacionado ao item.
+            tests:
+              - not_null
+              - relationships:
+                  to: source('sales_raw', 'products')
+                  field: product_id
